@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 
 public class MainApp {
 
-    public static final String BASE_URI = "http://localhost:8080/";
+    public static final String BASE_URI = "http://localhost:4040/";
 
     public static Server startServer() {
 
