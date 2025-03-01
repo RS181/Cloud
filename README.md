@@ -48,3 +48,40 @@ Project for Cloud System Administration
                     │   │               └── mkyong
                     │   │                   └── MyResourceTest.java
                     │   └── target
+
+# Upload (Video & Files)
+
++ Example of ```File Upload``` (Similar in both API's, only changes the URL)
+
+![alt text](Upload_Exemplo_Postman.png)
+
+
+# Download (Vide & Files)
+
++ In this case we use a browser to test (because **POSTMAN** has limitations in HTTP body)
+
+http://localhost:8080/download/resource/test.mp4
+
+
+# TODO 
+
++ Implementar autenticacao baseada por API TOKEN (vamos utilizar isto para autenticar admin's, e estamos a supor que so admins sabem este token)
+
++ Configurar NGINX como 
+
+    + Reverse proxy 
+    + Https
+
+
++ Criar VM's apartir da API (pesquisar sobre isto)
+    + tambem temos que desenvoler algo que nos crie uma vm perto da localizacao do cliente
+
++ Temos de arranjar forma de 'medir' a afluencia de trafego 
+
+
+# Duvidas 
+
++ Como e que medimos a afluencia de trafego? 
+    + Na API ?
+    + No NGINX ? 
+
