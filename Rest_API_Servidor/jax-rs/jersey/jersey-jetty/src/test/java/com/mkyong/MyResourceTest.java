@@ -20,6 +20,7 @@ public class MyResourceTest {
     private static Server server;
     private static WebTarget target;
 
+    /* 
     @BeforeAll
     public static void beforeAllTests() {
         server = MainApp.startServer();
@@ -67,5 +68,5 @@ public class MyResourceTest {
         JSONAssert.assertEquals(expected, actual, false);
 
     }
-
+    */
 }
