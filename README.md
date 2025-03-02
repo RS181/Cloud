@@ -66,8 +66,6 @@ Project for Cloud System Administration
 # TODO 
 
 
-+ Criar Base dados MYSQL para servidor principal (guarda Identificador_ficheiro -> localizacao_no_Sistema_ficheiros_Servidor_principal)
-
 + Implementar autenticacao baseada por API TOKEN (vamos utilizar isto para autenticar admin's, e estamos a supor que so admins sabem este token)
 
 
