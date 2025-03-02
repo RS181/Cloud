@@ -70,7 +70,6 @@ Project for Cloud System Administration
 
 
 + Configurar NGINX como 
-
     + Reverse proxy 
     + Https
 
@@ -93,4 +92,20 @@ Project for Cloud System Administration
 
 
 + Como vamos redirecionar o trafego? Fazemos isso na API com HTTP Redirect? 
+
++ e suposto poder remover ficheiros do servidor principal?
+    + Se sim, quando removemos do servvidor principal, e suposto que nenhuma replica tenha esse ficheiro?
+
+# O que ja temos 
+
++ Metodos de ```Upload``` e ```Download``` em ambas as API's
+
+
++ Ao fazer ```Upload``` de ficheiros na **Replica**, a **Replica** faz o ```Upload``` para **Servidor**
+
++ Ao receber um ```Upload``` o **Servidor** coloca na ```Base dados```
+    + Neste momento nao usamos a informacao na ```Base dados``` para nada (mais a frente podemos usar)
+
++ Se **cliente** pedir um ficheiro que a **Replica** nao tem, a **Replica** faz o pedido para o **Servidor** (caso **Servidor** tenha o ficheiro a **Replica** faz o ```Download```, e devolve ao cliente).
+
 
