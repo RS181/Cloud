@@ -3,10 +3,13 @@ package com.mkyong;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.File;
-
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -22,6 +25,7 @@ import jakarta.ws.rs.core.Response;
 public class Download {
     // Location where we store the Uploadede Resource's
     private static final String STORAGE_FOLDER =  "/home/rui/Desktop/Replica_File_Storage/";
+    private static final String SERVER_TEST_API_URL = "http://localhost:4040/hello";
 
     /**
      * Test if download service is available 
@@ -45,8 +49,13 @@ public class Download {
         File file = new File(STORAGE_FOLDER + fileName);
         
         if (!file.exists()) {
-            return Response.status(Response.Status.NOT_FOUND)
-                    .entity("ERROR: File '" + fileName + "' not found in storage.")
+            // If the file exists in the main server (Donwloaded to this replica)
+            if (getFileFromMainServer(fileName,false))
+                getFileFromMainServer(fileName, true);
+                
+            else 
+                return Response.status(Response.Status.NOT_FOUND)
+                    .entity("ERROR: File '" + fileName + "' not found in storage (local & Server).")
                     .build();
         }
         
@@ -67,6 +76,84 @@ public class Download {
                     .entity("ERROR: Unable to process file download.")
                     .build();
         }
+    }
+
+    /**
+     * Tries to get a file from the main server 
+     * 
+     * Note: we use startDownload argument to avoid having to separate functions
+     * (one for testing if Main server jas file and another to donwload the file)
+     * 
+     * We only use this method, if this replica does not have a requested 
+     * file 
+     * @param fileName
+     * @param startDownload boolean variable that indicates whether or not to download a file
+     * @return True/False depending if Main server has file (startDownload == false) or if 
+     * the download was sucessful (starDonwload == true)
+     */
+    public boolean getFileFromMainServer(String fileName, boolean startDownload){
+        if(!mainServerOn())
+            return false; 
+
+        String command = "";
+
+        if (!startDownload)
+            command = "curl http://localhost:4040/download-main/resource/" + fileName;
+        else 
+            command = 
+                "curl http://localhost:4040/download-main/resource/" + 
+                fileName + " > " + STORAGE_FOLDER + fileName  ;
+        
+        boolean hasFile = true;
+
+        try {
+            ProcessBuilder processBuilder = new ProcessBuilder("bash","-c",command);
+            processBuilder.redirectErrorStream(true);
+            Process process = processBuilder.start();
+
+            // Check if Main server has file 
+            if (!startDownload){
+                // Read's the output of process
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        if (line.equals("ERROR: File '"+fileName+"' not found in storage.")){
+                            hasFile = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            int exitCode = process.waitFor();
+
+        } catch (Exception e) {
+            System.out.println("ERRO: Metodo getFileFromMainServer");
+        }
+        return hasFile;
+    }
+
+
+    private boolean mainServerOn(){
+        
+        try{
+            URL url = new URL(SERVER_TEST_API_URL);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET"); 
+            connection.setConnectTimeout(5000); // Time limite for connection (5 sec)
+            connection.setReadTimeout(5000);    // Time limit for reading (5 sec)
+            
+            int responseCode = connection.getResponseCode();
+
+            if (responseCode == 200)
+                return true;
+            else 
+                return false;
+
+        }catch(Exception e){
+            System.out.println("MAIN SERVER IS OFFLINE");
+        }
+
+        return false;
     }
 
 }

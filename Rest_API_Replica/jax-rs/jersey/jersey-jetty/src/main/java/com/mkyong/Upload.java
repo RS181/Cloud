@@ -93,7 +93,7 @@ public class Upload {
 
 
 
-        return Response.status(Response.Status.OK).entity("Upload para Replica/Servidor feito com sucesso").build();
+        return Response.status(Response.Status.OK).entity("Upload Replica feito com sucesso").build();
     }
 
 
