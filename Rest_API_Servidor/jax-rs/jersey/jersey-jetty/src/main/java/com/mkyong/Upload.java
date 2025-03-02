@@ -12,6 +12,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.io.File;
 
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
@@ -64,13 +66,29 @@ public class Upload {
                     .build();
         }
 
+        // Atempts to save file in local storage 
         try {
             saveToFile(uploadedInputStream, file.getAbsolutePath() );
         } catch (IOException e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("ERROR: error while trying to save File in storage").build();
         }
 
-        return Response.status(Response.Status.OK).entity("Upload feito com sucesso").build();
+        // Attempts to save file in Server's Database
+        try{
+            String query = "INSERT INTO files (fileid,filelocation,numberofacesses) value(?,?,?)";
+            PreparedStatement preparedStmt = MainApp.con.prepareStatement(query);
+            preparedStmt.setString(1, fileName);
+            preparedStmt.setString(2, file.getAbsolutePath());
+            preparedStmt.setInt(3, 0);
+
+            preparedStmt.execute();
+            //System.out.println("SUCESS: Added new file to Main Server Database");
+        }catch(SQLException e){
+            System.out.println("Error ocurred while trying to add a file to the Main Server Database");
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("ERROR: error while trying to save File in DATABASE").build();
+        }
+
+        return Response.status(Response.Status.OK).entity("Upload (local e para B.D) feito com sucesso").build();
     }
 
     /**

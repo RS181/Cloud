@@ -12,7 +12,7 @@ import java.util.logging.Logger;
 public class MainApp {
 
     public static final String BASE_URI = "http://localhost:4040/";
-    public static final Connection teste = DB.OpenDatabase();
+    public static final Connection con = DB.OpenDatabase();
 
     public static Server startServer() {
 

@@ -1,9 +1,5 @@
 package com.mkyong;
 
-import org.eclipse.jetty.server.Server;
-import org.glassfish.jersey.jetty.JettyHttpContainerFactory;
-import org.glassfish.jersey.server.ResourceConfig;
-
 import java.net.URI;
 import java.sql.Connection;
 import java.sql.DriverManager;
