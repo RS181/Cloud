@@ -1,5 +1,6 @@
 com/mkyong/MyResource.class
 com/mkyong/MainApp.class
+com/mkyong/DB.class
 com/mkyong/Download.class
 com/mkyong/User.class
 com/mkyong/Upload.class
