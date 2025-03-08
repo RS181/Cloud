@@ -8,8 +8,11 @@ public class AbsolutePath {
     public static final String STORAGE_FOLDER =  "/home/rui/Desktop/Replica_File_Storage/";
     
     // URL to test API of Main Server
+    //public static final String SERVER_TEST_API_URL = "http://localhost/replica_api/hello";
     public static final String SERVER_TEST_API_URL = "http://localhost:4040/hello";
 
-    // URL of Upload API of Mian server 
+    // URL of Upload API of Main server 
+    //public static final String SERVER_UPLOAD_API_URL = "http://localhost/server_api/upload-main/resource";    
     public static final String SERVER_UPLOAD_API_URL = "http://localhost:4040/upload-main/resource";    
+
 }
