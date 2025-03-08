@@ -82,10 +82,30 @@ public class Upload {
         }
 
         try {
+            // Saves file in local storage
             saveToFile(uploadedInputStream, file.getAbsolutePath() );
+            
+            // Updates local Metadata file (to check if main server has this file) 
+            if(!GitManager.executeGitPull())
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("ERROR: error while trying to git pull Metadata repo").build();
 
-            if (mainServerOn())
-                sendToMainServer(file);
+            
+            // Tries to Save the data in Main server in case it doesnt already have it 
+            if (!JsonFileManager.checkIfMetadatExists(fileName)) {
+                System.out.println("Main server does not have file: " + fileName);
+                if (mainServerOn() )
+                    sendToMainServer(file);
+
+                // Saves metadata in local repo 
+                JsonFileManager.addMetadataToJson(fileName);
+                
+                // Push and commit's the local metadata file (that has changes)
+                if (!GitManager.executarGitCommitEPush()){
+                    return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("ERROR: error while trying to git commit & push Metadata repo").build();
+                }
+            }else{
+                System.out.println("Main server already has file: " + fileName);
+            }
 
         } catch (IOException e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("ERROR: error while trying to save File in storage").build();
