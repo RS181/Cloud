@@ -15,4 +15,6 @@ public class AbsolutePath {
     //public static final String SERVER_UPLOAD_API_URL = "http://localhost/server_api/upload-main/resource";    
     public static final String SERVER_UPLOAD_API_URL = "http://localhost:4040/upload-main/resource";    
 
+    // Location where we store Uploaded Resource's Metadata (corresponds to git repo)
+    public static final String METADATA_FILE = "/home/rui/Desktop/Cloud_Meta_data/metadata.json";
 }
