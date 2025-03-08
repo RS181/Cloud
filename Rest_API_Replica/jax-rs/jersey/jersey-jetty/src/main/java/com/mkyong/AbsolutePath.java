@@ -15,6 +15,10 @@ public class AbsolutePath {
     //public static final String SERVER_UPLOAD_API_URL = "http://localhost/server_api/upload-main/resource";    
     public static final String SERVER_UPLOAD_API_URL = "http://localhost:4040/upload-main/resource";    
 
-    // Location where we store Uploaded Replica Resource's Metadata (corresponds to git repo)
+    // File in which we store Uploaded Replica Resource's Metadata 
     public static final String METADATA_FILE = "/home/rui/Desktop/Replica_Metadata/Cloud_Meta_data/metadata.json";
+
+    // Repo where we store METADATA_FILE
+    public static final String METADATA_DIR = "/home/rui/Desktop/Replica_Metadata/Cloud_Meta_data";
+
 }
