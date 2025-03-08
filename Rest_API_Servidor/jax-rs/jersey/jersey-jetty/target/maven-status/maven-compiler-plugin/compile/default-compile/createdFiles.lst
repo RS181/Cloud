@@ -1,4 +1,5 @@
 com/mkyong/MainApp.class
+com/mkyong/JsonFileManager.class
 com/mkyong/Upload.class
 com/mkyong/MyResource.class
 com/mkyong/AbsolutePath.class
