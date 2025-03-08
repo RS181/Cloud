@@ -5,11 +5,11 @@ package com.mkyong;
  */
 public class AbsolutePath {
     // Location where we store Uploaded Resource's
-    private static final String STORAGE_FOLDER =  "/home/rui/Desktop/Replica_File_Storage/";
+    public static final String STORAGE_FOLDER =  "/home/rui/Desktop/Replica_File_Storage/";
     
     // URL to test API of Main Server
-    private static final String SERVER_TEST_API_URL = "http://localhost:4040/hello";
+    public static final String SERVER_TEST_API_URL = "http://localhost:4040/hello";
 
     // URL of Upload API of Mian server 
-    private static final String SERVER_UPLOAD_API_URL = "http://localhost:4040/upload-main/resource";    
+    public static final String SERVER_UPLOAD_API_URL = "http://localhost:4040/upload-main/resource";    
 }

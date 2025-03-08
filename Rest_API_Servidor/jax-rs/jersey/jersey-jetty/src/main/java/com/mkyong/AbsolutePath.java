@@ -4,6 +4,5 @@ package com.mkyong;
  */
 public class AbsolutePath {
     // Location where we store Uploaded Resource's
-    private static final String STORAGE_FOLDER =  "/home/rui/Desktop/Servidor_File_Storage/";
-
+    public static final String STORAGE_FOLDER =  "/home/rui/Desktop/Servidor_File_Storage/";
 }

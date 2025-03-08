@@ -25,7 +25,7 @@ import org.glassfish.jersey.media.multipart.FormDataParam;
 public class Upload {
 
     // Location where we store the Uploadede Resource's
-    private static final String STORAGE_FOLDER =  "/home/rui/Desktop/Servidor_File_Storage/";
+    private static final String STORAGE_FOLDER =  AbsolutePath.STORAGE_FOLDER;
 
     /**
      * Test if Upload service is available 

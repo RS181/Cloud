@@ -24,8 +24,8 @@ import jakarta.ws.rs.core.Response;
 @Path("/download")
 public class Download {
     // Location where we store the Uploadede Resource's
-    private static final String STORAGE_FOLDER =  "/home/rui/Desktop/Replica_File_Storage/";
-    private static final String SERVER_TEST_API_URL = "http://localhost:4040/hello";
+    private static final String STORAGE_FOLDER =  AbsolutePath.STORAGE_FOLDER;
+    private static final String SERVER_TEST_API_URL = AbsolutePath.SERVER_TEST_API_URL;
 
     /**
      * Test if download service is available 
