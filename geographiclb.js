@@ -46,7 +46,7 @@ async function handleRequest(request) {
 
 
   } catch (error) {
-    console.error('Erro ao buscar do backend:', error);
+    console.error('Erro ao procurar pelo backend:', error);
     return new Response('Erro ao conectar ao servidor de origem.', { status: 500 });
   }
 }
