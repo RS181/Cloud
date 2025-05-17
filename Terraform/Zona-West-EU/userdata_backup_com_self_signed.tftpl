@@ -1,0 +1,94 @@
+#! /usr/bin/env bash
+
+set -euo pipefail
+
+echo "[INFO] Installing NGINX"
+sudo apt-get update
+sudo apt-get install -y nginx
+sudo systemctl enable nginx
+
+echo "[INFO] Terraform variable heading_one = ${heading_one}"
+
+echo "[INFO] Creating custom index.html"
+echo "<html><body><h1>${heading_one}</h1></body></html>" > /var/www/html/index.html
+
+echo "[INFO] Changing permission in /var/www/html for www-data"
+sudo chown -R www-data:www-data /var/www/html
+sudo chmod -R 755 /var/www/html
+
+echo "[INFO] Generating self-signed SSL certificate for NGINX"
+sudo mkdir -p /etc/nginx/ssl
+sudo openssl req -x509 -nodes -days 365 \
+  -newkey rsa:2048 \
+  -keyout /etc/nginx/ssl/selfsigned.key \
+  -out /etc/nginx/ssl/selfsigned.crt \
+  -subj "/CN=localhost"
+
+
+echo "[INFO] Creating custom NGINX conf"
+cat > /etc/nginx/nginx.conf <<EOF
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+	worker_connections 4096;
+}
+
+http {
+    proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=my_cache:10m max_size=20g inactive=60m use_temp_path=off;
+
+    upstream backend {
+        server 74.235.226.100:443;  # Ex: 20.120.102.191
+    }
+
+    server {
+        listen 80;
+        server_name _;
+
+        # redirect to HTTPS
+        return 301 https://\$host\$request_uri;
+
+    }
+
+    server {
+        listen 443 ssl default_server;
+        server_name _;
+
+        ssl_certificate     /etc/nginx/ssl/selfsigned.crt;
+        ssl_certificate_key /etc/nginx/ssl/selfsigned.key;
+
+
+        root /var/www/html;
+        index index.html;
+
+
+        location /local/ {
+                alias /var/www/html/;
+                index index.html;
+                try_files \$uri \$uri/ =404;
+        }
+
+        location / {
+            proxy_pass https://backend;
+            proxy_ssl_verify off;
+            proxy_cache my_cache;
+            proxy_cache_valid 200 302 10m;
+            proxy_cache_valid 404 1m;
+            proxy_cache_use_stale error timeout updating;
+            add_header X-Cache-Status \$upstream_cache_status;
+            add_header X-Served-By "replica";
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+    }
+}
+EOF
+
+echo "[INFO] Restarting NGINX with HTTPS configuration"
+sudo nginx -t && sudo systemctl restart nginx
+
+echo "[INFO] Finished setup script"

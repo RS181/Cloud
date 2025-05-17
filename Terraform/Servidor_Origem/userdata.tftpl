@@ -1,0 +1,239 @@
+#! /usr/bin/env bash
+
+set -euo pipefail 
+
+echo "[INFO] Installing NGINX"
+sudo apt-get update 
+sudo apt-get install -y nginx 
+sudo systemctl enable nginx
+
+echo "[INFO] Terraform variable heading_one = ${heading_one}"
+
+echo "[INFO] Creating custom index.html"
+echo "<html><body><h1>${heading_one}</h1></body></html>" > /var/www/html/index.html
+
+echo "[INFO] Writing  Cloudflare Origin certificate and Private Key"
+sudo mkdir -p /etc/nginx/ssl
+
+cat > /etc/nginx/ssl/up202109728.pt.pem << 'EOF'
+-----BEGIN CERTIFICATE-----
+MIIEqDCCA5CgAwIBAgIUFKZcU5RG3RI7wh5Hpx6X65Y2za8wDQYJKoZIhvcNAQEL
+BQAwgYsxCzAJBgNVBAYTAlVTMRkwFwYDVQQKExBDbG91ZEZsYXJlLCBJbmMuMTQw
+MgYDVQQLEytDbG91ZEZsYXJlIE9yaWdpbiBTU0wgQ2VydGlmaWNhdGUgQXV0aG9y
+aXR5MRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMRMwEQYDVQQIEwpDYWxpZm9ybmlh
+MB4XDTI1MDUxMjIwMTAwMFoXDTQwMDUwODIwMTAwMFowYjEZMBcGA1UEChMQQ2xv
+dWRGbGFyZSwgSW5jLjEdMBsGA1UECxMUQ2xvdWRGbGFyZSBPcmlnaW4gQ0ExJjAk
+BgNVBAMTHUNsb3VkRmxhcmUgT3JpZ2luIENlcnRpZmljYXRlMIIBIjANBgkqhkiG
+9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0d9akB1GQgWWZLFyQYnzCKjLdB7eHAjuwBsQ
+zB0t7H+qq+GKCcgcwmDS0XuSAYV2nRDgkuOw2hlvYcSiHZrZx7xWNBHgnDgiqqdE
+Z72LZDdGl//ZjVRhwORUtQKzVXO1D4okazc43BYjXbAydEsnTx+u0MhRLeW/k0dy
+YXN0XqDrPoX/RHyM5qg3w2fS/lAfVziF7r8tGS90SCH36gTDJ+pvBeo1Gn/d2b2v
+PGNgEnfq0rmrbr7Jmh1cvTFSMLuInhFpeJFhfXh6EhVsDBMTLv5U5aX2+/B5nXrd
+gOXKgTcBlhVwgqc/34Nkx+ljlq0kmafdhqbry9wjhBBRvbncIwIDAQABo4IBKjCC
+ASYwDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcD
+ATAMBgNVHRMBAf8EAjAAMB0GA1UdDgQWBBS/DNHOKFnUcRTPFORPDxmjUt0VQTAf
+BgNVHSMEGDAWgBQk6FNXXXw0QIep65TbuuEWePwppDBABggrBgEFBQcBAQQ0MDIw
+MAYIKwYBBQUHMAGGJGh0dHA6Ly9vY3NwLmNsb3VkZmxhcmUuY29tL29yaWdpbl9j
+YTArBgNVHREEJDAighAqLnVwMjAyMTA5NzI4LnB0gg51cDIwMjEwOTcyOC5wdDA4
+BgNVHR8EMTAvMC2gK6AphidodHRwOi8vY3JsLmNsb3VkZmxhcmUuY29tL29yaWdp
+bl9jYS5jcmwwDQYJKoZIhvcNAQELBQADggEBAAEBI9u5w8Jaqfff0afMwMK4fB6I
+mmTZoLT6Bl/A+Lh8yfSP2pZQ0DlChgBZpMuHCPX0xVCpVX3lSnS0STcvXvtqYm5e
+2NpxfqedDpDJkrLVUxsSBrc3KBewOrK9GfPejC0CTe8xW4TR27CtRZoVZzOQo7aR
+65Cfcse2xOMjyjT/JUYUCnaOPZxJOKhJXcigYiEd01auR1twcgVRD0Kr5WOpBwkr
+nJ1M1P6oRnjkZX2vrNMBrRFzpjf2cB9fhW7YcCp3ALekBff+QgpWCK52b2bAHBjy
+la9wyZSa1Qmi4+Zv7Cxm51wGk4zxDUekDUKopyIsVh60lpol7D+GbXJKB+E=
+-----END CERTIFICATE-----
+EOF
+
+cat > /etc/nginx/ssl/up202109728.pt.key << 'EOF'
+-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----
+EOF
+
+sudo chmod 600 /etc/nginx/ssl/up202109728.pt.*
+
+echo "[INFO] Creating custom NGINX conf"
+cat > /etc/nginx/nginx.conf <<EOF
+worker_processes auto;
+events {
+    worker_connections 1024;
+}
+http {
+
+    server {
+        listen 80;
+        server_name origin.up202109728.pt;
+        # redirect to HTTPS
+        return 301 https://\$host\$request_uri;
+    }
+
+    server {
+        listen 443 ssl default_server;
+        server_name origin.up202109728.pt;
+
+        ssl_certificate     /etc/nginx/ssl/up202109728.pt.pem;
+        ssl_certificate_key /etc/nginx/ssl/up202109728.pt.key;
+
+        root /var/www/html;
+        index index.html;
+    
+        location / {
+            try_files \$uri \$uri/ =404;
+            add_header X-Origin-Server "origin";
+        }
+
+        location /login {
+            proxy_pass http://127.0.0.1:5000;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+
+        location /upload {
+           proxy_pass http://127.0.0.1:5000;
+           proxy_set_header Host \$host;
+           proxy_set_header X-Real-IP \$remote_addr;
+           proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+
+        location /uploads/ {
+            alias /var/www/html/uploads/;
+            autoindex on;
+        }
+    }
+}
+EOF
+
+
+#echo "[INFO] Restarting NGINX with HTTPS configuration"
+sudo nginx -t && sudo systemctl restart nginx
+
+
+
+# Configure Python upload API using flask
+echo "[INFO] Installing Python and Flask dependencies"
+sudo apt-get install -y python3-pip
+sudo pip3 install flask python-dotenv pyjwt werkzeug
+
+echo "[INFO] Creating upload directory for NGINX"
+mkdir -p /var/www/html/uploads
+chmod -R 755 /var/www/html/uploads
+
+echo "[INFO] Creating .env file"
+cat > /opt/.env << EOF
+SECRET_KEY="chave"
+DEFAULT_PASSWORD="1234"
+EOF
+
+
+echo "[INFO] Creating Flask app"
+cat > /opt/upload_api.py << 'EOF'
+from flask import Flask, request, jsonify
+import os
+import jwt
+import datetime
+from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path="/opt/.env")
+
+app = Flask(__name__)
+UPLOAD_FOLDER = '/var/www/html/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+USERS = {
+    "admin": generate_password_hash(os.environ.get('DEFAULT_PASSWORD'))
+}
+
+if not SECRET_KEY:
+    raise ValueError("A variável de ambiente SECRET_KEY não está definida.")
+if not os.environ.get('DEFAULT_PASSWORD'):
+    raise ValueError("A variável de ambiente DEFAULT_PASSWORD não está definida.")
+
+def generate_token(username):
+    now = datetime.datetime.utcnow()
+    expiration = now + datetime.timedelta(minutes=2)
+    payload = {
+        'exp': expiration,
+        'iat': now,
+        'sub': username
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+
+def decode_token(token):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        return payload['sub']
+    except jwt.ExpiredSignatureError:
+        print("Token expirado detectado!")
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+def requires_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth_header = request.headers.get('Authorization')
+        print(f"Cabeçalho de autorização: {auth_header}")
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'Token is missing or invalid'}), 401
+        token = auth_header.split(' ')[1]
+        username = decode_token(token)
+        if not username:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    if not username or not password or username not in USERS or not check_password_hash(USERS[username], password):
+        return jsonify({'error': 'Invalid credentials'}), 401
+    token = generate_token(username)
+    return jsonify({'token': token}), 200
+
+@app.route('/upload', methods=['POST'])
+@requires_auth
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    file.save(os.path.join(UPLOAD_FOLDER, file.filename))
+    return jsonify({'message': 'File uploaded successfully'}), 200
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
+EOF
+
+echo "[INFO] Creating systemd service for Flask API"
+cat > /etc/systemd/system/upload-api.service << EOF
+[Unit]
+Description=Flask Upload API
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/upload_api.py
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+echo "[INFO] Starting Flask API service"
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl start upload-api.service
+sudo systemctl enable upload-api.service
+
+
+echo "[INFO] Finished setup script"

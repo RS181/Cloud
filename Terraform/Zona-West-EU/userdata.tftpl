@@ -1,0 +1,127 @@
+#! /usr/bin/env bash
+
+set -euo pipefail
+
+echo "[INFO] Installing NGINX"
+sudo apt-get update
+sudo apt-get install -y nginx
+sudo systemctl enable nginx
+
+echo "[INFO] Terraform variable heading_one = ${heading_one}"
+
+echo "[INFO] Creating custom index.html"
+echo "<html><body><h1>${heading_one}</h1></body></html>" > /var/www/html/index.html
+
+echo "[INFO] Changing permission in /var/www/html for www-data"
+sudo chown -R www-data:www-data /var/www/html
+sudo chmod -R 755 /var/www/html
+
+echo "[INFO] Writing  Cloudflare Origin certificate and Private Key"
+sudo mkdir -p /etc/nginx/ssl
+
+cat > /etc/nginx/ssl/up202109728.pt.pem << 'EOF'
+-----BEGIN CERTIFICATE-----
+MIIEqDCCA5CgAwIBAgIUFKZcU5RG3RI7wh5Hpx6X65Y2za8wDQYJKoZIhvcNAQEL
+BQAwgYsxCzAJBgNVBAYTAlVTMRkwFwYDVQQKExBDbG91ZEZsYXJlLCBJbmMuMTQw
+MgYDVQQLEytDbG91ZEZsYXJlIE9yaWdpbiBTU0wgQ2VydGlmaWNhdGUgQXV0aG9y
+aXR5MRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMRMwEQYDVQQIEwpDYWxpZm9ybmlh
+MB4XDTI1MDUxMjIwMTAwMFoXDTQwMDUwODIwMTAwMFowYjEZMBcGA1UEChMQQ2xv
+dWRGbGFyZSwgSW5jLjEdMBsGA1UECxMUQ2xvdWRGbGFyZSBPcmlnaW4gQ0ExJjAk
+BgNVBAMTHUNsb3VkRmxhcmUgT3JpZ2luIENlcnRpZmljYXRlMIIBIjANBgkqhkiG
+9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0d9akB1GQgWWZLFyQYnzCKjLdB7eHAjuwBsQ
+zB0t7H+qq+GKCcgcwmDS0XuSAYV2nRDgkuOw2hlvYcSiHZrZx7xWNBHgnDgiqqdE
+Z72LZDdGl//ZjVRhwORUtQKzVXO1D4okazc43BYjXbAydEsnTx+u0MhRLeW/k0dy
+YXN0XqDrPoX/RHyM5qg3w2fS/lAfVziF7r8tGS90SCH36gTDJ+pvBeo1Gn/d2b2v
+PGNgEnfq0rmrbr7Jmh1cvTFSMLuInhFpeJFhfXh6EhVsDBMTLv5U5aX2+/B5nXrd
+gOXKgTcBlhVwgqc/34Nkx+ljlq0kmafdhqbry9wjhBBRvbncIwIDAQABo4IBKjCC
+ASYwDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcD
+ATAMBgNVHRMBAf8EAjAAMB0GA1UdDgQWBBS/DNHOKFnUcRTPFORPDxmjUt0VQTAf
+BgNVHSMEGDAWgBQk6FNXXXw0QIep65TbuuEWePwppDBABggrBgEFBQcBAQQ0MDIw
+MAYIKwYBBQUHMAGGJGh0dHA6Ly9vY3NwLmNsb3VkZmxhcmUuY29tL29yaWdpbl9j
+YTArBgNVHREEJDAighAqLnVwMjAyMTA5NzI4LnB0gg51cDIwMjEwOTcyOC5wdDA4
+BgNVHR8EMTAvMC2gK6AphidodHRwOi8vY3JsLmNsb3VkZmxhcmUuY29tL29yaWdp
+bl9jYS5jcmwwDQYJKoZIhvcNAQELBQADggEBAAEBI9u5w8Jaqfff0afMwMK4fB6I
+mmTZoLT6Bl/A+Lh8yfSP2pZQ0DlChgBZpMuHCPX0xVCpVX3lSnS0STcvXvtqYm5e
+2NpxfqedDpDJkrLVUxsSBrc3KBewOrK9GfPejC0CTe8xW4TR27CtRZoVZzOQo7aR
+65Cfcse2xOMjyjT/JUYUCnaOPZxJOKhJXcigYiEd01auR1twcgVRD0Kr5WOpBwkr
+nJ1M1P6oRnjkZX2vrNMBrRFzpjf2cB9fhW7YcCp3ALekBff+QgpWCK52b2bAHBjy
+la9wyZSa1Qmi4+Zv7Cxm51wGk4zxDUekDUKopyIsVh60lpol7D+GbXJKB+E=
+-----END CERTIFICATE-----
+EOF
+
+cat > /etc/nginx/ssl/up202109728.pt.key << 'EOF'
+-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----
+EOF
+
+sudo chmod 600 /etc/nginx/ssl/up202109728.pt.*
+
+echo "[INFO] Creating custom NGINX conf"
+cat > /etc/nginx/nginx.conf <<EOF
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+	worker_connections 4096;
+}
+
+http {
+    proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=my_cache:10m max_size=20g inactive=60m use_temp_path=off;
+
+    upstream backend {
+        # So funciona com Ip publico da VM origem
+        # server origin.up202109728.pt:443;
+        server 172.172.148.150:443;  # Ex: 20.120.102.191
+    }
+
+    server {
+        listen 80;
+        server_name westeulb.up202109728.pt;
+
+        # redirect to HTTPS
+        return 301 https://\$host\$request_uri;
+
+    }
+
+    server {
+        listen 443 ssl default_server;
+        server_name westeulb.up202109728.pt;
+
+        ssl_certificate     /etc/nginx/ssl/up202109728.pt.pem;
+        ssl_certificate_key /etc/nginx/ssl/up202109728.pt.key;
+
+        root /var/www/html;
+        index index.html;
+
+
+        location /local/ {
+                alias /var/www/html/;
+                index index.html;
+                try_files \$uri \$uri/ =404;
+        }
+
+        location / {
+            proxy_pass https://backend;
+            proxy_ssl_verify off;
+            proxy_cache my_cache;
+            proxy_cache_valid 200 302 10m;
+            proxy_cache_valid 404 1m;
+            proxy_cache_use_stale error timeout updating;
+            add_header X-Cache-Status \$upstream_cache_status;
+            add_header X-Served-By "replica";
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+    }
+}
+EOF
+
+echo "[INFO] Restarting NGINX with HTTPS configuration"
+sudo nginx -t && sudo systemctl restart nginx
+
+echo "[INFO] Finished setup script"

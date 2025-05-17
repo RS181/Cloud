@@ -1,0 +1,130 @@
+#! /usr/bin/env bash
+
+set -euo pipefail 
+
+echo "[INFO] Installing NGINX"
+sudo apt-get update 
+sudo apt-get install -y nginx 
+sudo systemctl enable nginx
+
+echo "[INFO] Terraform variable heading_one = ${heading_one}"
+
+echo "[INFO] Creating custom index.html"
+echo "<html><body><h1>${heading_one}</h1></body></html>" > /var/www/html/index.html
+
+
+echo "[INFO] Generating self-signed SSL certificate for NGINX"
+sudo mkdir -p /etc/nginx/ssl
+sudo openssl req -x509 -nodes -days 365 \
+  -newkey rsa:2048 \
+  -keyout /etc/nginx/ssl/selfsigned.key \
+  -out /etc/nginx/ssl/selfsigned.crt \
+  -subj "/CN=localhost"
+
+
+echo "[INFO] Creating custom NGINX conf"
+cat > /etc/nginx/nginx.conf <<EOF
+worker_processes auto;
+events {
+    worker_connections 1024;
+}
+http {
+
+    server {
+        listen 80;
+        server_name _;
+
+        # redirect to HTTPS
+        return 301 https://\$host\$request_uri;
+    }
+
+    server {
+        listen 443 ssl default_server;
+        server_name _;
+
+        ssl_certificate     /etc/nginx/ssl/selfsigned.crt;
+        ssl_certificate_key /etc/nginx/ssl/selfsigned.key;
+
+        root /var/www/html;
+        index index.html;
+    
+        location / {
+            try_files \$uri \$uri/ =404;
+            add_header X-Origin-Server "origin";
+        }
+
+        location /upload {
+           proxy_pass http://127.0.0.1:5000;
+           proxy_set_header Host \$host;
+           proxy_set_header X-Real-IP \$remote_addr;
+           proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+
+        location /uploads/ {
+            alias /var/www/html/uploads/;
+            autoindex on;
+        }
+    }
+}
+EOF
+
+echo "[INFO] Restarting NGINX with HTTPS configuration"
+sudo nginx -t && sudo systemctl restart nginx
+
+
+# Configure Python upload API using flask
+echo "[INFO] Installing Python and Flask"
+sudo apt-get install -y python3-pip
+sudo pip3 install flask
+
+echo "[INFO] Creating upload directory for NGINX"
+mkdir -p /var/www/html/uploads
+chmod -R 755 /var/www/html/uploads
+
+echo "[INFO] Creating Flask app"
+cat > /opt/upload_api.py << EOF
+from flask import Flask, request, jsonify
+import os
+
+app = Flask(__name__)
+UPLOAD_FOLDER = '/var/www/html/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    file.save(os.path.join(UPLOAD_FOLDER, file.filename))
+    return jsonify({'message': 'File uploaded successfully'}), 200
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+EOF
+
+echo "[INFO] Creating systemd service for Flask API"
+cat > /etc/systemd/system/upload-api.service << EOF
+[Unit]
+Description=Flask Upload API
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/upload_api.py
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+echo "[INFO] Starting Flask API service"
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl start upload-api.service
+sudo systemctl enable upload-api.service
+
+
+echo "[INFO] Finished setup script"
