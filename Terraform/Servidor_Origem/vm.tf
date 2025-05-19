@@ -175,7 +175,8 @@ resource "azurerm_linux_virtual_machine" "origin-server" {
   name                = "origin-server-machine"
   resource_group_name = azurerm_resource_group.origin-server.name
   location            = azurerm_resource_group.origin-server.location
-  size                = "Standard_F2"
+  # size                = "Standard_F2"
+  size                = "Standard_B2ms"
   admin_username      = "adminuser"
   user_data           = base64encode(templatefile("userdata.tftpl", local.data_inputs))
   network_interface_ids = [
@@ -189,7 +190,8 @@ resource "azurerm_linux_virtual_machine" "origin-server" {
 
   os_disk {
     caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
+    storage_account_type = "StandardSSD_LRS"
+    disk_size_gb         = 128 # Define o tamanho do disco para 128 Gb
   }
 
   source_image_reference {

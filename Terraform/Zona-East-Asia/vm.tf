@@ -136,7 +136,7 @@ resource "azurerm_linux_virtual_machine_scale_set" "replica" {
   name                = "replica-vmss-asia"
   resource_group_name = azurerm_resource_group.replica.name
   location            = azurerm_resource_group.replica.location
-  sku                 = "Standard_B2s"
+  sku                 = "Standard_B2ms"
   # autoscale é que vai gerir instâncias
   # instances           = 2
   admin_username = "adminuser"
@@ -156,8 +156,9 @@ resource "azurerm_linux_virtual_machine_scale_set" "replica" {
   }
 
   os_disk {
-    storage_account_type = "Standard_LRS"
+    storage_account_type = "StandardSSD_LRS"
     caching              = "ReadWrite"
+    disk_size_gb         = 32
   }
 
   network_interface {
